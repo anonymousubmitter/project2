@@ -68,7 +68,7 @@ public:
 		struct dirent **namelist;
 		int n;
 
-		char disk_name[10];
+		char disk_name[20];
 		sprintf(disk_name, "%s%d", disk_prefix, disk);
 		n = scandir(disk_name, &namelist, 0, versionsort);
 		if (n < 3)
@@ -112,7 +112,19 @@ public:
         write_buffer = new unsigned char*[write_buffer_cap];
         write_buffer_size = 0;
     }
-	static void setDiskPrefix(const char* prefix){strcpy(File::disk_prefix, prefix);}
+	static void setDiskPrefix(const char* prefix)
+    {
+        strcpy(File::disk_prefix, prefix);
+		char disk_name[20];
+		sprintf(disk_name, "%s%d", disk_prefix, 1);
+        struct stat buffer;
+        if (stat (disk_name, &buffer) != 0)
+        {
+            char cmd[25];
+            sprintf(cmd, "mkdir %s", disk_name);
+            system(cmd);
+        }
+    }
 	static char* getFileNameFromPointer(Pointer* p);
 	static int openFile(char* file_name, bool read_only, bool create);
 

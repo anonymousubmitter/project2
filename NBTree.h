@@ -31,6 +31,8 @@
 #include "btree/btree_map.h"
 #include <fstream>
 #include <sstream>
+#include <sys/stat.h>
+
 
 class Record;
 class FileManager;

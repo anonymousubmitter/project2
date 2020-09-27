@@ -38,7 +38,6 @@ void* mergeInBackground(void* nbtree)
     CPU_ZERO(&cpuset);
     CPU_SET(1, &cpuset);
     s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-    //s = pthread_setschedparam(thread, SCHED_IDLE, &param);                                     
 
     NBTree* nbt = (NBTree*)nbtree;
     uint64_t mem_leaf_bytes = nbt->getMemLeafBytes();
@@ -55,7 +54,6 @@ void* mergeInBackground(void* nbtree)
             is_merging = false;
             micro_s_per_ins = 0;
         }
-        //usleep(1000);
     }
     return NULL;
 }
@@ -78,7 +76,7 @@ void NBTree::read_config(string conf_file_name) {
     in.open(conf_file_name.c_str());
     std::string str;
 
-	data_prefix = new char[10];
+	data_prefix = new char[20];
 	rnode_size = 4096;
 	snode_size = 4;
 	fanout = 4;
@@ -143,6 +141,14 @@ void NBTree::read_config(string conf_file_name) {
         mem_usage = (static_cast<uint64_t>(rnode_size)*(snode_size-1)*2L*12L)/10;
     }
 
+    struct stat buffer;
+    if (stat (data_prefix, &buffer) != 0)
+    {
+        char cmd[25];
+        sprintf(cmd, "mkdir %s", data_prefix);
+        system(cmd);
+    }
+    sprintf(data_prefix, "%s/data", data_prefix);
 }
 
 string NBTree::get_configs()
@@ -167,29 +173,18 @@ string NBTree::get_configs()
 
 void NBTree::initialize()
 {
-
-
     File::setDiskPrefix(this->data_prefix);
 
     File::setFileNo(1);
-	//File::setFileNo(2);
-	//File::setFileNo(3);
 	File::initWSeekT();
 	File::initRSeekT();
 	File::initWSeqT();
 	File::initRSeqT();
 
-    LoadFromRoot();
 
     file_manger = new FileManager;
-    //uint64_t extra_bytes = 30;
     mem_leaf_bytes = (9*mem_usage)/20;
-    memManager = new MemoryManager(mem_leaf_bytes);///(sizeof(KEY)+MAX_VAL_SIZE+sizeof(char*)+extra_bytes)/2));
-    /*buff_key = memManager->get_buff_key();
-    buff_val = memManager->get_buff_val();
-    buff_cap = memManager->get_buff_cap();
-    buff_read = memManager->get_buff_read();
-    buff_wrote = memManager->get_buff_wrote();*/
+    memManager = new MemoryManager(mem_leaf_bytes);
 
     micro_s_per_ins = 0;
 
@@ -209,19 +204,12 @@ void NBTree::initialize()
     counter = 0;
 
     int s;
-    //struct sched_param params;
-    //params.sched_priority = sched_get_priority_max(SCHED_FIFO);
     cpu_set_t cpuset;
     pthread_t thread;
     thread = pthread_self();
     CPU_ZERO(&cpuset);
     CPU_SET(3, &cpuset);
-    //CPU_SET(0, &cpuset);
     s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-    //s = pthread_setschedparam(thread, SCHED_FIFO, &params);
-
-
-
 }
 
 
@@ -304,9 +292,6 @@ void NBTree::mergeDownMem(MapNode* rkeys_to_merge)
 {
     Merger* merger = new Merger(this, rnode_size, snode_size, buffer_size);
 	merger->merge(root_sn, rkeys_to_merge, false);
-    //rkeys_to_merge->setLock();
-    //rkeys_to_merge->clear();
-    //rkeys_to_merge->unsetLock();
     delete merger;
 }
 
@@ -323,7 +308,6 @@ void NBTree::flushDownMemory()
     if (root_sn->getNoElements() == 0)
     {
         moveMemToDisk(rkeys_to_merge);
-        //root_sn->printStructur(0);
         return;
 	}
 
@@ -332,21 +316,16 @@ void NBTree::flushDownMemory()
     if (root_sn->getNoElements() > fanout-1)
         moveMemToDisk(rkeys_to_merge);
 
-    //root_sn->printStructur(0);
-
 }
 
 
 void NBTree::countCheck(int& no_nodes, int& no_elements)
 {
-	//inMemoryBPTree->countCheck(no_nodes, no_elements);
     throw "Not implemented";
 }
 
 void NBTree::print()
 {
-	//flushDownMemory();
-	//inMemoryBPTree->print();
     root_sn->print(0);
 
 
@@ -410,47 +389,6 @@ void NBTree::saveRoot()
 void NBTree::LoadFromRoot()
 {
     throw "Not Implemented";
-    /*
-	Pointer* root_pointer = new Pointer(0, 0, 1);
-	File* root_file = new File(root_pointer, false, rnode_size, true, cache);
-	delete root_pointer;
-	if (!root_file->exists())
-	{
-		delete root_file;
-		return;
-	}
-
-	Pointer* curr_disk_loc = new Pointer(0, 0, 1);
-	InnerNode* page_read = NULL;
-	bool is_first = true;
-
-	while(Merger::getNextLeaf(curr_disk_loc , page_read, is_first , this, rnode_size, root_file, true))
-	{
-		for (int i = 0; i < page_read->getNoElements(); i++)
-		{
-            Pointer* first_child = NULL;
-            throw "find first childA";
-			if (first_child == NULL)
-			{
-				Pointer* root = new Pointer(page_read->getPLAt(i)->getLocation(), page_read->getPLAt(i)->getFileNo(), page_read->getPLAt(i)->getDisk());
-				first_child = new Pointer(0, 0, 1);
-				File* file = new File(root, false, rnode_size, false, cache);
-				InnerNode* node = NULL;
-				Merger::getFirstLeafFromRoot(root, first_child , node, file, this);
-				delete node;
-				delete file;
-			}
-
-			memManager->insertInMemory(page_read->getKeyAt(i), page_read->getValueAt(i), page_read->getPLAt(i), page_read->getNextPL(i));
-
-		}
-	}
-
-	//this->print();
-	delete root_file;
-	delete page_read;
-	delete curr_disk_loc;
-    */
 }
 
 
